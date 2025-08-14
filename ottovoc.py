@@ -39,7 +39,7 @@ def main():
     st.write("Tämä sovellus kysyy sinulta käännöksiä suomenkielisille sanoille.")
 
     # 🔁 VAIHDA TÄMÄ OMAAN DROPBOX-LINKKIISI
-    csv_url = "https://www.dropbox.com/scl/fi/0re5cxtkm5qvnvp8fw30n/otto.csv?rlkey=urjiadm3pcgpx32f0q9pr1hiy&st=3lljmkbc&dl=1"
+    csv_url = "https://www.dropbox.com/scl/fi/0re5cxtkm5qvnvp8fw30n/otto.csv?rlkey=urjiadm3pcgpx32f0q9pr1hiy&st=thl9c8n9&dl=1"
 
 
     vocab = load_vocab_from_url(csv_url)
@@ -117,4 +117,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
