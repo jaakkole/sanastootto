@@ -6,22 +6,62 @@ from io import StringIO
 import random
 
 def load_vocab_from_url(url):
+    import csv
+    from io import StringIO
+
     vocab = {}
-    dl_url = url.replace("?dl=0", "?dl=1")
+
+    # Suora latauslinkki
+    dl_url = (
+        url.replace("?dl=0", "?dl=1")
+           .replace("?raw=1", "?dl=1")
+    )
+
     try:
-        response = requests.get(dl_url)
-        response.raise_for_status()
-        file_content = response.content.decode('utf-8')
-        f = StringIO(file_content)
-        reader = csv.DictReader(f)
+        resp = requests.get(dl_url, timeout=15)
+        resp.raise_for_status()
+
+        # Merkistön automaattinen valinta
+        content = None
+        for enc in ("utf-8", "utf-8-sig", "cp1252", "iso-8859-1"):
+            try:
+                content = resp.content.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        if content is None:
+            raise UnicodeError("Tuntematon merkistö (kokeiltu utf-8, utf-8-sig, cp1252, iso-8859-1)")
+
+        # Erotin tunnistus
+        sample = content[:4096]
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;|\t")
+            delimiter = dialect.delimiter
+        except csv.Error:
+            delimiter = ";" if (";" in sample and "," not in sample) else ","
+
+        f = StringIO(content)
+        reader = csv.DictReader(f, delimiter=delimiter)
+
+        # Otsikoiden normalisointi
+        fieldnames = [fn.strip() for fn in (reader.fieldnames or [])]
+        field_map = {fn.lower(): fn for fn in fieldnames}
+        fi_col = next((field_map[k] for k in ("finnish", "suomi", "fi") if k in field_map), None)
+        en_col = next((field_map[k] for k in ("english", "englanti", "en") if k in field_map), None)
+        if not fi_col or not en_col:
+            raise KeyError(f"Tarvitaan sarakkeet 'finnish' ja 'english' (löydetyt: {fieldnames})")
+
         for row in reader:
-            finnish = row['finnish'].strip().lower()
-            english = row['english'].strip().lower()
-            if finnish and english:
-                vocab[finnish] = english
+            fi = (row.get(fi_col, "") or "").strip().lower()
+            en = (row.get(en_col, "") or "").strip().lower()
+            if fi and en:
+                vocab[fi] = en
+
     except Exception as e:
         st.error(f"CSV-tiedoston lataus epäonnistui: {e}")
+
     return vocab
+
 
 def check_answer(user_answer, correct_answer):
     user_answer = user_answer.strip().lower()
@@ -39,8 +79,7 @@ def main():
     st.write("Tämä sovellus kysyy sinulta käännöksiä suomenkielisille sanoille.")
 
     # 🔁 VAIHDA TÄMÄ OMAAN DROPBOX-LINKKIISI
-    csv_url = "https://www.dropbox.com/scl/fi/0re5cxtkm5qvnvp8fw30n/otto.csv?rlkey=urjiadm3pcgpx32f0q9pr1hiy&st=thl9c8n9&dl=1"
-
+    csv_url = "csv_url = "https://www.dropbox.com/scl/fi/0re5cxtkm5qvnvp8fw30n/otto.csv?rlkey=urjiadm3pcgpx32f0q9pr1hiy&dl=1"
 
     vocab = load_vocab_from_url(csv_url)
 
@@ -117,5 +156,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
